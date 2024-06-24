@@ -5,15 +5,32 @@ from bokeh.io.export import export_png
 
 output_notebook()
 
-# Funktion zur Simulation eines Kampfes zwischen einer Held:in und einem Gegner
-def simulate_battle(hero_strength, hero_willpower, hero_dice, enemy_strength, enemy_willpower, enemy_dice, simulations=10000):
+# Funktion zur Simulation einer Kampfrunde
+def simulate_round(hero_strength, hero_dice, hero_wp, enemy_strength, enemy_dice, enemy_wp):
+    hero_roll = sum(np.random.randint(1, 7) for _ in range(hero_dice)) + hero_strength
+    enemy_roll = sum(np.random.randint(1, 7) for _ in range(enemy_dice)) + enemy_strength
+
+    if hero_roll > enemy_roll:
+        damage = hero_roll - enemy_roll
+        enemy_wp -= damage
+    elif enemy_roll > hero_roll:
+        damage = enemy_roll - hero_roll
+        hero_wp -= damage
+
+    return hero_wp, enemy_wp
+
+# Funktion zur Simulation eines Kampfes
+def simulate_battle(hero_strength, hero_initial_wp, hero_dice, enemy_strength, enemy_initial_wp, enemy_dice, simulations=10000):
     hero_wins = 0
 
     for _ in range(simulations):
-        hero_roll = sum(np.random.randint(1, 7) for _ in range(hero_dice)) + hero_strength + (hero_willpower // 5)
-        enemy_roll = sum(np.random.randint(1, 7) for _ in range(enemy_dice)) + enemy_strength + (enemy_willpower // 5)
+        hero_wp = hero_initial_wp
+        enemy_wp = enemy_initial_wp
 
-        if hero_roll > enemy_roll:
+        while hero_wp > 0 and enemy_wp > 0:
+            hero_wp, enemy_wp = simulate_round(hero_strength, hero_dice, hero_wp, enemy_strength, enemy_dice, enemy_wp)
+
+        if hero_wp > 0:
             hero_wins += 1
 
     win_probability = hero_wins / simulations
