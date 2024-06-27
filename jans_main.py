@@ -1,10 +1,15 @@
 from typing import Dict, List
 import numpy as np
-from bokeh.plotting import figure, show, output_notebook, output_file, save
+from bokeh.plotting import figure, show
 from bokeh.layouts import gridplot
-from bokeh.io.export import export_png
 from tabulate import tabulate
 from enum import Enum
+from bokeh.io import show, export_svgs, save, output_file
+from bokeh.plotting import figure
+from bokeh.models import ColumnDataSource
+from bokeh.transform import dodge
+from bokeh.layouts import gridplot
+from bokeh.models import HoverTool
 
 
 class DiceColor(Enum):
@@ -258,6 +263,89 @@ def run_simulation(simulations: int = 10000, objects: List[Objects] | None = Non
     return results
 
 
+def create_hero_object_plot(hero_name, object_type, data):
+    # Extract enemy names
+    enemies = list(data[object_type][hero_name].keys())
+
+    # Prepare data for plotting
+    plot_data = {
+        "enemies": enemies,
+        "hero_wins": [
+            data[object_type][hero_name][enemy]["hero_wins"] for enemy in enemies
+        ],
+        "no_winner": [
+            data[object_type][hero_name][enemy]["no_winner"] for enemy in enemies
+        ],
+        "enemy_wins": [
+            data[object_type][hero_name][enemy]["enemy_wins"] for enemy in enemies
+        ],
+    }
+
+    # Create ColumnDataSource
+    source = ColumnDataSource(data=plot_data)
+
+    p = figure(
+        x_range=enemies,
+        title=f"{hero_name} with {object_type}",
+        toolbar_location=None,
+        tools="",
+    )
+
+    colors = ["#c9d9d3", "#718dbf", "#e84d60"]
+    outcomes = ["hero_wins", "no_winner", "enemy_wins"]
+
+    p.vbar(
+        x=dodge("enemies", -0.25, range=p.x_range),
+        top="hero_wins",
+        width=0.2,
+        source=source,
+        color=colors[0],
+        legend_label="Hero Wins",
+    )
+    p.vbar(
+        x=dodge("enemies", 0.0, range=p.x_range),
+        top="no_winner",
+        width=0.2,
+        source=source,
+        color=colors[1],
+        legend_label="No Winner",
+    )
+    p.vbar(
+        x=dodge("enemies", 0.25, range=p.x_range),
+        top="enemy_wins",
+        width=0.2,
+        source=source,
+        color=colors[2],
+        legend_label="Enemy Wins",
+    )
+
+    p.add_tools(
+        HoverTool(
+            tooltips=[
+                ("Enemy", "@enemies"),
+                ("Hero Wins", "@hero_wins{%0.2f}"),
+                ("No Winner", "@no_winner{%0.2f}"),
+                ("Enemy Wins", "@enemy_wins{%0.2f}"),
+            ],
+            formatters={
+                "@hero_wins": "printf",
+                "@no_winner": "printf",
+                "@enemy_wins": "printf",
+            },
+        )
+    )
+
+    p.x_range.range_padding = 0.1
+    p.xgrid.grid_line_color = None
+    p.y_range.start = 0
+    p.yaxis.axis_label = "Probability"
+    p.xaxis.axis_label = "Enemies"
+    p.legend.location = "top_left"
+    p.legend.orientation = "horizontal"
+
+    return p
+
+
 # Funktion zur Simulation eines Kampfes mit nur einer Person
 # Geht davon aus, dass der Kampf nicht über den Verlust eines SP hinaus geführt wird
 # Er beginnt immer am Anfang eines Tages (d.h. max 7 Runden)
@@ -265,7 +353,11 @@ def run_simulation(simulations: int = 10000, objects: List[Objects] | None = Non
 if __name__ == "__main__":
     simulation_results = {}
 
-    for objects in [None, [Objects.HELMET], [Objects.WITCH_POTION]]:
+    for objects in [
+        None,
+        [Objects.WITCH_POTION],
+        [Objects.HELMET],
+    ]:
         used_objects = (
             "None" if objects is None else ", ".join([obj.value for obj in objects])
         )
@@ -280,8 +372,8 @@ if __name__ == "__main__":
                     [
                         enemy,
                         f"{enemy_results['hero_wins']:.2%}",
-                        f"{enemy_results['no_winner']:.2%}",
-                        f"{enemy_results['enemy_wins']:.2%}",
+                        #                       f"{enemy_results['no_winner']:.2%}",
+                        #                       f"{enemy_results['enemy_wins']:.2%}",
                     ]
                 )
 
@@ -289,31 +381,17 @@ if __name__ == "__main__":
             print(tabulate(table, headers=headers, tablefmt="grid"))
             print()
 
-"""
-# Bokeh Plots generieren
-plots = []
-for hero_name, hero_results in results.items():
-    x = list(hero_results.keys())
-    y = list(hero_results.values())
-    y = [i["win"] for i in y]
-    p = figure(
-        x_range=x, title=f"Siegchancen für {hero_name}", toolbar_location=None, tools=""
-    )
-    p.vbar(x=x, top=y, width=0.9)
-    p.xgrid.grid_line_color = None
-    p.y_range.start = 0
-    p.y_range.end = 1
-    p.xaxis.major_label_orientation = 1
-    p.yaxis.axis_label = "Siegchance"
-    plots.append(p)
+    plots = []
+    for object_type in simulation_results:
+        for hero in simulation_results[object_type]:
+            plot = create_hero_object_plot(hero, object_type, simulation_results)
+            plots.append(plot)
 
-grid = gridplot(plots, ncols=2)
-show(grid)
+            plot.output_backend = "svg"
+            export_svgs(plot, filename=f"{hero}_{object_type}.svg")
 
-# Speichern als HTML-Datei
-output_file("andor_simulation_results.html")
-save(grid)
-
-# Exportiere das Grid als PNG-Datei
-export_png(grid, filename="andor_simulation_results.png")
-"""
+    # Arrange plots in a grid
+    grid = gridplot(plots, ncols=4)
+    output_file("andor_simulation_results.html")
+    save(grid)
+    show(grid)
