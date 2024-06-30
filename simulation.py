@@ -12,13 +12,14 @@ from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.palettes import Category20
 
+
 class DiceColor(Enum):
     RED = [1, 2, 3, 4, 5, 6]
     BLACK = [6, 6, 8, 10, 10, 12]
 
 
 class Objects(Enum):
-    WITCH_POTION = "Zaubertrank"
+    WITCH_POTION = "Hexentrunk"
     HELMET = "Helm"
 
 
@@ -183,13 +184,13 @@ class Battle:
 
 
 def generate_hero(name: HeroName, objects: List[object] | None = None):
-    if name == HeroName.WARRIOR: # thorn
+    if name == HeroName.WARRIOR:  # thorn
         return Hero(HeroName.WARRIOR, 6, 14, {6: 2, 13: 3, 14: 4}, objects)
-    elif name == HeroName.ARCHER: #chada
+    elif name == HeroName.ARCHER:  # chada
         return Hero(HeroName.ARCHER, 5, 14, {6: 3, 13: 4, 14: 5}, objects)
-    elif name == HeroName.WIZARD: #eara
+    elif name == HeroName.WIZARD:  # eara
         return Hero(HeroName.WIZARD, 4, 14, {6: 1, 13: 1, 14: 1}, objects)
-    elif name == HeroName.DWARF: # kram
+    elif name == HeroName.DWARF:  # kram
         return Hero(HeroName.DWARF, 7, 14, {6: 1, 13: 2, 14: 3}, objects)
     else:
         raise ValueError("Unexpected figure")
@@ -256,7 +257,9 @@ def run_simulation(simulations: int = 10000, objects: List[Objects] | None = Non
                 else:
                     raise ValueError("Unexpected outcome")
 
-            results[hero.value][enemy.value]["held_gewinnt"] = held_gewinnt / simulations
+            results[hero.value][enemy.value]["held_gewinnt"] = (
+                held_gewinnt / simulations
+            )
             results[hero.value][enemy.value]["kein_sieger"] = kein_sieger / simulations
             results[hero.value][enemy.value]["enemy_wins"] = enemy_wins / simulations
 
@@ -349,7 +352,6 @@ def create_hero_object_plot(hero_name, object_type, data):
 # Funktion zur Simulation eines Kampfes mit nur einer Person
 # Geht davon aus, dass der Kampf nicht über den Verlust eines SP hinaus geführt wird
 # Er beginnt immer am Anfang eines Tages (d.h. max 7 Runden)
-# Zudem gibt es keine zusätlichen Gegenstände (z.B. Helm)
 if __name__ == "__main__":
     simulation_results = {}
 
@@ -359,7 +361,7 @@ if __name__ == "__main__":
         [Objects.HELMET],
     ]:
         used_objects = (
-            "None" if objects is None else ", ".join([obj.value for obj in objects])
+            "Keine" if objects is None else ", ".join([obj.value for obj in objects])
         )
         simulation_results[used_objects] = run_simulation(objects=objects)
 
