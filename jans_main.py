@@ -10,7 +10,7 @@ from bokeh.models import ColumnDataSource
 from bokeh.transform import dodge
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
-
+from bokeh.palettes import Category20
 
 class DiceColor(Enum):
     RED = [1, 2, 3, 4, 5, 6]
@@ -18,15 +18,15 @@ class DiceColor(Enum):
 
 
 class Objects(Enum):
-    WITCH_POTION = "Witch Potion"
-    HELMET = "Helmet"
+    WITCH_POTION = "Zaubertrank"
+    HELMET = "Helm"
 
 
 class HeroName(Enum):
-    WARRIOR = "Warrior"
-    ARCHER = "Archer"
-    WIZARD = "Wizard"
-    DWARF = "Dwarf"
+    WARRIOR = "Thorn"
+    ARCHER = "Chada"
+    WIZARD = "Eara"
+    DWARF = "Kram"
 
 
 class EnemyName(Enum):
@@ -183,13 +183,13 @@ class Battle:
 
 
 def generate_hero(name: HeroName, objects: List[object] | None = None):
-    if name == HeroName.WARRIOR:
+    if name == HeroName.WARRIOR: # thorn
         return Hero(HeroName.WARRIOR, 6, 14, {6: 2, 13: 3, 14: 4}, objects)
-    elif name == HeroName.ARCHER:
+    elif name == HeroName.ARCHER: #chada
         return Hero(HeroName.ARCHER, 5, 14, {6: 3, 13: 4, 14: 5}, objects)
-    elif name == HeroName.WIZARD:
+    elif name == HeroName.WIZARD: #eara
         return Hero(HeroName.WIZARD, 4, 14, {6: 1, 13: 1, 14: 1}, objects)
-    elif name == HeroName.DWARF:
+    elif name == HeroName.DWARF: # kram
         return Hero(HeroName.DWARF, 7, 14, {6: 1, 13: 2, 14: 3}, objects)
     else:
         raise ValueError("Unexpected figure")
@@ -228,9 +228,9 @@ def run_simulation(simulations: int = 10000, objects: List[Objects] | None = Non
     results = {
         hero.value: {
             enemy.value: {
-                "hero_wins": None,  # Initialize hero_wins with None
+                "held_gewinnt": None,  # Initialize held_gewinnt with None
                 "enemy_wins": None,  # Initialize enemy_wins with None
-                "no_winner": None,  # Initialize no_winner with None
+                "kein_sieger": None,  # Initialize kein_sieger with None
             }
             for enemy in enemies  # Loop through each enemy for the current hero
         }
@@ -239,8 +239,8 @@ def run_simulation(simulations: int = 10000, objects: List[Objects] | None = Non
 
     for hero in heroes:
         for enemy in enemies:
-            hero_wins = 0
-            no_winner = 0
+            held_gewinnt = 0
+            kein_sieger = 0
             enemy_wins = 0
 
             for _ in range(simulations):
@@ -248,16 +248,16 @@ def run_simulation(simulations: int = 10000, objects: List[Objects] | None = Non
                 winner = battle.run_simulation()
 
                 if winner is None:
-                    no_winner += 1
+                    kein_sieger += 1
                 elif winner == hero:
-                    hero_wins += 1
+                    held_gewinnt += 1
                 elif winner == enemy:
                     enemy_wins += 1
                 else:
                     raise ValueError("Unexpected outcome")
 
-            results[hero.value][enemy.value]["hero_wins"] = hero_wins / simulations
-            results[hero.value][enemy.value]["no_winner"] = no_winner / simulations
+            results[hero.value][enemy.value]["held_gewinnt"] = held_gewinnt / simulations
+            results[hero.value][enemy.value]["kein_sieger"] = kein_sieger / simulations
             results[hero.value][enemy.value]["enemy_wins"] = enemy_wins / simulations
 
     return results
@@ -270,11 +270,11 @@ def create_hero_object_plot(hero_name, object_type, data):
     # Prepare data for plotting
     plot_data = {
         "enemies": enemies,
-        "hero_wins": [
-            data[object_type][hero_name][enemy]["hero_wins"] for enemy in enemies
+        "held_gewinnt": [
+            data[object_type][hero_name][enemy]["held_gewinnt"] for enemy in enemies
         ],
-        "no_winner": [
-            data[object_type][hero_name][enemy]["no_winner"] for enemy in enemies
+        "kein_sieger": [
+            data[object_type][hero_name][enemy]["kein_sieger"] for enemy in enemies
         ],
         "enemy_wins": [
             data[object_type][hero_name][enemy]["enemy_wins"] for enemy in enemies
@@ -286,29 +286,29 @@ def create_hero_object_plot(hero_name, object_type, data):
 
     p = figure(
         x_range=enemies,
-        title=f"{hero_name} with {object_type}",
+        title=f"{hero_name} mit {object_type}",
         toolbar_location=None,
         tools="",
     )
 
-    colors = ["#c9d9d3", "#718dbf", "#e84d60"]
-    outcomes = ["hero_wins", "no_winner", "enemy_wins"]
+    colors = Category20[3]
+    outcomes = ["held_gewinnt", "kein_sieger", "enemy_wins"]
 
     p.vbar(
         x=dodge("enemies", -0.25, range=p.x_range),
-        top="hero_wins",
+        top="held_gewinnt",
         width=0.2,
         source=source,
         color=colors[0],
-        legend_label="Hero Wins",
+        legend_label="Held gewinnt",
     )
     p.vbar(
         x=dodge("enemies", 0.0, range=p.x_range),
-        top="no_winner",
+        top="kein_sieger",
         width=0.2,
         source=source,
         color=colors[1],
-        legend_label="No Winner",
+        legend_label="Kein Sieger",
     )
     p.vbar(
         x=dodge("enemies", 0.25, range=p.x_range),
@@ -316,20 +316,20 @@ def create_hero_object_plot(hero_name, object_type, data):
         width=0.2,
         source=source,
         color=colors[2],
-        legend_label="Enemy Wins",
+        legend_label="Gegner gewinnt",
     )
 
     p.add_tools(
         HoverTool(
             tooltips=[
-                ("Enemy", "@enemies"),
-                ("Hero Wins", "@hero_wins{%0.2f}"),
-                ("No Winner", "@no_winner{%0.2f}"),
-                ("Enemy Wins", "@enemy_wins{%0.2f}"),
+                ("Gegner", "@enemies"),
+                ("Held gewinnt", "@held_gewinnt{%0.2f}"),
+                ("Kein Sieger", "@kein_sieger{%0.2f}"),
+                ("Gegner gewinnt", "@enemy_wins{%0.2f}"),
             ],
             formatters={
-                "@hero_wins": "printf",
-                "@no_winner": "printf",
+                "@held_gewinnt": "printf",
+                "@kein_sieger": "printf",
                 "@enemy_wins": "printf",
             },
         )
@@ -338,8 +338,8 @@ def create_hero_object_plot(hero_name, object_type, data):
     p.x_range.range_padding = 0.1
     p.xgrid.grid_line_color = None
     p.y_range.start = 0
-    p.yaxis.axis_label = "Probability"
-    p.xaxis.axis_label = "Enemies"
+    p.yaxis.axis_label = "Wahrscheinlichkeit"
+    p.xaxis.axis_label = "Gegner"
     p.legend.location = "top_left"
     p.legend.orientation = "horizontal"
 
@@ -371,13 +371,13 @@ if __name__ == "__main__":
                 table.append(
                     [
                         enemy,
-                        f"{enemy_results['hero_wins']:.2%}",
-                        #                       f"{enemy_results['no_winner']:.2%}",
+                        f"{enemy_results['held_gewinnt']:.2%}",
+                        #                       f"{enemy_results['kein_sieger']:.2%}",
                         #                       f"{enemy_results['enemy_wins']:.2%}",
                     ]
                 )
 
-            headers = ["Enemy", "Hero Wins", "No Winner", "Enemy Wins"]
+            headers = ["Enemy", "Held gewinnt", "Kein Sieger", "Gegner gewinnt"]
             print(tabulate(table, headers=headers, tablefmt="grid"))
             print()
 
