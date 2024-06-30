@@ -390,7 +390,7 @@ if __name__ == "__main__":
             plots.append(plot)
 
             plot.output_backend = "svg"
-            export_svgs(plot, filename=f"{hero}_{object_type}.svg")
+            export_svgs(plot, filename=f"plots/{hero}_{object_type}.svg")
 
     # Arrange plots in a grid
     grid = gridplot(plots, ncols=4)
